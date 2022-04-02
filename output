@@ -1,0 +1,84 @@
+partition: 0
+left relation records:
+right relation records:
+
+
+partition: 1
+left relation records:
+right relation records:
+Record with key=2 and data=22r
+
+
+partition: 2
+left relation records:
+right relation records:
+
+
+partition: 3
+left relation records:
+right relation records:
+
+
+partition: 4
+left relation records:
+right relation records:
+
+
+partition: 5
+left relation records:
+right relation records:
+
+
+partition: 6
+left relation records:
+right relation records:
+
+
+partition: 7
+left relation records:
+right relation records:
+
+
+partition: 8
+left relation records:
+right relation records:
+
+
+partition: 9
+left relation records:
+right relation records:
+
+
+partition: 10
+left relation records:
+right relation records:
+
+
+partition: 11
+left relation records:
+right relation records:
+
+
+partition: 12
+left relation records:
+right relation records:
+
+
+partition: 13
+left relation records:
+Record with key=1 and data=1l
+Record with key=1 and data=11l
+Record with key=1 and data=111l
+right relation records:
+Record with key=1 and data=1r
+Record with key=1 and data=11r
+
+
+partition: 14
+left relation records:
+Record with key=0 and data=0l
+right relation records:
+Record with key=0 and data=0r
+
+
+Size of GHJ result: 0 pages

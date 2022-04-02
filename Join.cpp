@@ -15,8 +15,8 @@ in which each bucket stores all the disk page IDs and number of records for the 
 
 
     void partitionRelation(unsigned int begin, unsigned int end, Disk *disk, Mem* mem,
-    unsigned int inputPageIndex, unsigned int bufferPages, vector<Bucket> &buckets);
-    
+    unsigned int inputPageIndex, unsigned int bufferPages, vector<Bucket> &buckets, int rightOrLeft);
+
 vector<Bucket> partition(
     Disk* disk, 
     Mem* mem, 
@@ -32,60 +32,53 @@ vector<Bucket> partition(
 
         //the amount of buckets is proprotional to the amount of buffer pages
         vector<Bucket> buckets(bufferPages, Bucket(disk));
+        
+        partitionRelation(left_rel.first, left_rel.second, disk, mem, inputPageIndex, bufferPages, buckets, 1);
+        partitionRelation(right_rel.first, right_rel.second, disk, mem, inputPageIndex, bufferPages, buckets, 0);
 
-        unsigned int leftBegin = left_rel.first;
-        unsigned int leftEnd = left_rel.second;
+        for(unsigned int i = 0; i < buckets.size(); ++i) {
 
-        //partion left relation
-        //we want to iterate over every disk page in left relation
-        for(unsigned int diskPageIndex = leftBegin; diskPageIndex < leftEnd; ++diskPageIndex) {
-
-            //load the page from disk to inputpage
-            mem->loadFromDisk(disk, diskPageIndex, inputPageIndex);
-            Page* inputPage = mem->mem_page(inputPageIndex);
-
-            //hash each record in this page 
-            //data record returned from get_record will be in range of [0, size)
-            for(unsigned int recordIndex = 0; recordIndex < inputPage->size(); ++recordIndex) {
-
-                Record record = inputPage->get_record(recordIndex);
-                unsigned int hashVal = (record.partition_hash() % bufferPages) + 1; //add 1 since page 0 reserved for input
-
-                //now load this record into buffer page from the hashVal
-                Page* bufferPage = mem->mem_page(hashVal);
-                bufferPage->loadRecord(record);
-
-                //check if buffer page is full, and flush all buffer pages to disk if it is
-                if(bufferPage->size() == RECORDS_PER_PAGE) {
-
-                    //loop over every buffer page
-                    //bufferPageIndex starts = 1 since 0 is reserved for inputPage
-                    for(int bufferPageIndex = 1; bufferPageIndex <= bufferPages; ++bufferPageIndex) {
-                        unsigned int diskpage = mem->flushToDisk(disk, bufferPageIndex);
-                        buckets[bufferPageIndex - 1].add_left_rel_page(diskpage); //-1 since the buckets array is 0 indexed
-
-                        //clear the page since we flushed to disk
-                        Page *p = mem->mem_page(bufferPageIndex);
-                        p->reset();
-                    }
-
-
+            vector<unsigned int> leftDiskPageIds = buckets[i].get_left_rel();
+            vector<unsigned int> rightDiskPages = buckets[i].get_right_rel();
+            // for(int x = 0; x < leftDiskPageIds.size(); ++x) {
+            //     cout << "Bucket " << i << " " << leftDiskPageIds[x] << "\n";
+            // }
+            
+            //vector<unsigned int> rightDiskPageIds = buckets[i].get_right_rel();
+            cout << "partition: " << i << "\n";
+            cout << "left relation records:\n";
+            for(vector<unsigned int>::iterator it = leftDiskPageIds.begin(); it != leftDiskPageIds.end(); ++it) {
+                mem->loadFromDisk(disk, *it, 0);
+                Page *p = mem->mem_page(0);
+                for(int i = 0; i < p->size(); ++i) {
+                    Record r = p->get_record(i);
+                    r.print();
                 }
-
+            }
+            cout << "right relation records:\n";
+            for(vector<unsigned int>::iterator it = rightDiskPages.begin(); it != rightDiskPages.end(); ++it) {
+                mem->loadFromDisk(disk, *it, 0);
+                Page *p = mem->mem_page(0);
+                for(int i = 0; i < p->size(); ++i) {
+                    Record r = p->get_record(i);
+                    r.print();
+                }
             }
 
+            cout <<"\n\n";
+
+            
         }
 
-
-
+        return buckets; 
     }
 
     void partitionRelation(unsigned int begin, unsigned int end, Disk *disk, Mem* mem,
-    unsigned int inputPageIndex, unsigned int bufferPages, vector<Bucket> &buckets) {
+    unsigned int inputPageIndex, unsigned int bufferPages, vector<Bucket> &buckets, int rightOrLeft) {
 
 
         //partion left relation
-        //we want to iterate over every disk page in left relation
+        //we want to iterate over every disk page in the relation
         for(unsigned int diskPageIndex = begin; diskPageIndex < end; ++diskPageIndex) {
 
             //load the page from disk to inputpage
@@ -95,22 +88,31 @@ vector<Bucket> partition(
             //hash each record in this page 
             //data record returned from get_record will be in range of [0, size)
             for(unsigned int recordIndex = 0; recordIndex < inputPage->size(); ++recordIndex) {
+                //cout << "HERE" << "\n";
 
                 Record record = inputPage->get_record(recordIndex);
+               // record.print();
                 unsigned int hashVal = (record.partition_hash() % bufferPages) + 1; //add 1 since page 0 reserved for input
+                //cout << hashVal << "\n\n";
 
                 //now load this record into buffer page from the hashVal
                 Page* bufferPage = mem->mem_page(hashVal);
                 bufferPage->loadRecord(record);
 
-                //check if buffer page is full, and flush all buffer pages to disk if it is
-                if(bufferPage->size() == RECORDS_PER_PAGE) {
+                //check if buffer page is full or we are in last itteration, and flush all buffer pages to disk if it is
+                if(bufferPage->size() == RECORDS_PER_PAGE || diskPageIndex == end - 1) {
 
                     //loop over every buffer page
                     //bufferPageIndex starts = 1 since 0 is reserved for inputPage
-                    for(int bufferPageIndex = 1; bufferPageIndex <= bufferPages; ++bufferPageIndex) {
+                    for(unsigned int bufferPageIndex = 1; bufferPageIndex <= bufferPages; ++bufferPageIndex) {
+
                         unsigned int diskpage = mem->flushToDisk(disk, bufferPageIndex);
-                        buckets[bufferPageIndex - 1].add_left_rel_page(diskpage); //-1 since the buckets array is 0 indexed
+
+                        if(rightOrLeft == 0) {
+                             buckets[bufferPageIndex - 1].add_right_rel_page(diskpage); //-1 since the buckets array is 0 indexed
+                        } else if(rightOrLeft == 1) {
+                            buckets[bufferPageIndex - 1].add_left_rel_page(diskpage);
+                        }
 
                         //clear the page since we flushed to disk
                         Page *p = mem->mem_page(bufferPageIndex);
@@ -125,6 +127,8 @@ vector<Bucket> partition(
         }
 
     }
+
+
 
 
 /*
