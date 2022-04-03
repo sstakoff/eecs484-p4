@@ -1,2 +1,4 @@
 *.pdf
 output2
+.DS_Store
+x
